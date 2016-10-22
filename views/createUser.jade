@@ -1,0 +1,28 @@
+extends layout
+
+block content
+	h1= title
+	fieldset
+		form(name="login", method="post")
+			label Enter Your Email:
+			p
+			input(type="email", placeholder="username@domain.com", name="email")
+			p
+			label Confirm Your Email:
+			p
+			input(type="email", placeholder="username@domain.com", name="confirmEmail")
+			p
+			label Enter a Password:
+			p
+			input(type="password", name="password")
+			p
+			label Confirm your Password:
+			p
+			input(type="password", name="confirmPassword")
+			p
+			input(type="submit", value="Create User")
+	fieldset
+		legend Current User List
+		ul
+			each user, i in userlist
+				li #{user.email}

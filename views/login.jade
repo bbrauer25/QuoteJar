@@ -1,0 +1,15 @@
+extends layout
+
+block content
+	h1= title
+	fieldset
+		form(name="login", method="post")
+			label Email:
+			p
+			input(type="email", placeholder="username@domain.com", name="email")
+			p
+			label Password:
+			p
+			input(type="password", name="password")
+			p
+			input(type="submit", value="Login")
