@@ -1,9 +1,14 @@
 extends layout
 
 block content
-	h1= title
+	h1 Please Login to Quote Jar
+	if prompt
+		p #{prompt}
+	if errors
+		each error, i in errors
+			p #{error.msg}
 	fieldset
-		form(name="login", method="post")
+		form(name="login", method="post", action="/login")
 			label Email:
 			p
 			input(type="email", placeholder="username@domain.com", name="email")
@@ -13,3 +18,5 @@ block content
 			input(type="password", name="password")
 			p
 			input(type="submit", value="Login")
+			p
+			a(href="/createUser") Create a New User

@@ -1,0 +1,22 @@
+extends layout
+
+block content
+	h1 Current Quotes:
+	p
+	a(href="/addQuote") Add a Quote
+	p
+	each quote, i in quotes
+		fieldset
+			p Quote:  #{quote.text} 
+			p Said By:  #{quote.said_by}
+			label Tags:  
+			each tag, j in quote.tags
+				li #{tag}
+			p Rating: #{quote.rating}
+			p Favorite: #{quote.isFavorite}
+			form(name="edit", method='post', action="/editQuote")
+				input(type="hidden", value="#{quote._id}", name="quote_id")
+				input(type="submit", value="Edit")
+
+
+

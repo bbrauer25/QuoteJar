@@ -1,0 +1,50 @@
+extends layout
+
+block content
+	h1 Edit Quote:
+	p
+	if errors
+		each error, i in errors
+			p #{error.msg}
+	fieldset
+		form(name="editQuote", method="post", action="saveEdit")
+			label Text:
+			p
+			textarea(name="text") #{quote.text}
+			p
+			label Said By:
+			p
+			input(type="text", name="said_by", value="#{quote.said_by}")
+			p
+			label Tags:  
+			each quoteTag, i in quoteTags
+				- var checkTag = 0				
+				each tag, i in quote.tags
+					if tag == quoteTag
+						- checkTag = 1
+				if checkTag == 1
+					input(type="checkbox", name="tag[]", value="#{quoteTag}", checked=true)
+				else
+					input(type="checkbox", name="tag[]", value="#{quoteTag}")
+				span #{quoteTag}
+			p
+			label Rating:
+			p
+			input(type="number", name="rating", value="#{quote.rating}", min="1", max="9")
+			p
+			label Favorite:
+				if quote.isFavorite == true						
+					input(type="radio", name="isFavorite", value="true" checked)
+					span true
+					input(type="radio", name="isFavorite", value="false")
+					span false
+				else
+					input(type="radio", name="isFavorite", value="true")
+					span true
+					input(type="radio", name="isFavorite", value="false" checked)
+					span false
+			p
+			input(type="hidden", value="#{quote._id}", name="quote_id")
+			input(type="submit", value="Save")
+
+

@@ -1,0 +1,38 @@
+extends layout
+
+block content
+	h1 Add Quote:
+	if errors
+		each error, i in errors
+			p #{error.msg}
+	p
+	fieldset
+		form(name="addQuote", method="post", action="addQuote")
+			label Text:
+			p
+			textarea(name="text")
+			p
+			label Said By:
+			p
+			input(type="text", name="said_by", value="")
+			p
+			label Tags:  
+			each quoteTag, i in quoteTags
+				input(type="checkbox", name="tag[]", value="#{quoteTag}")
+				span #{quoteTag}
+			p
+			label Rating:
+			p
+			input(type="number", name="rating", value="1", min="1", max="9")
+			p
+			label Favorite:					
+				input(type="radio", name="isFavorite", value="true" checked)
+				span true
+				input(type="radio", name="isFavorite", value="false")
+				span false
+			p
+			input(type="submit", value="Save")
+			p
+			a(href="/viewQuotes") Cancel
+
+

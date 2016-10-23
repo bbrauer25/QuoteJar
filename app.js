@@ -25,6 +25,8 @@ var bodyParser = require('body-parser');
 var mongo = require('mongodb');
 var monk = require('monk');
 var db = monk('localhost:27017/QuoteJar');
+var validator = require('express-validator');
+var sessions = require('client-sessions');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
@@ -35,11 +37,23 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+//use this to change port
+//app.set('port', 3001);
+
+//sessions to store user info
+app.use(sessions({
+  cookieName: 'session',
+  secret: 'my_super_secret_string',
+  duration: 5 * 60 * 1000,
+  activeDuration: 5 * 60 * 1000
+}));
+
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(validator());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -1,9 +1,12 @@
 extends layout
 
 block content
-	h1= title
+	h1 Create a New User
+	if errors
+		each error, i in errors
+			p #{error.msg}
 	fieldset
-		form(name="login", method="post")
+		form(name="login", method="post", action="createUser")
 			label Enter Your Email:
 			p
 			input(type="email", placeholder="username@domain.com", name="email")
