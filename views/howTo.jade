@@ -1,0 +1,198 @@
+extends layout
+head
+  block title
+    How To REST in iOS
+body
+  block content
+    div.container
+      div.blog-header
+        h1.blog-title How To REST Easy in iOS
+        p.lead.blog-description Combining CoreData and SwiftyJSON to Make an App that Works with MongoDB powered REST APIs
+      div.row
+        div.col-sm-8.blog-main
+          div.blog-post
+            h2.blog-post-title Intro
+            p I found it surprisingly challenging to get started developing actual useful apps in iOS when it came to interacting with modern APIs and data, especially REST APIs requiring and returning fairly detailed, often nested JSON docs with varying data types, like the sort you'd encounter coming from a MongoDB backend.  Figuring out how to properly form requests, interact with persistent data storage in the app, and do it all with different constraints on variable types depending on where you were at in the process, especially in a strongly typed language like Swift, took a lot of digging through documentation, demos, and trial and error.  The default jSON handlign in Swift is verbose and tough to grok at first.  Forming proper requests to APIs is also a bit challenging, especially for someone coming off of more experience with Python and Javascript.  Take a look at these two examples, one in Python and one in Swift, that accomplish essentially the same thing.
+            h3 Python
+            pre
+              code 
+                | url = 'http://104.236.251.255:3000/api/login'
+                | headers = {'Content-Type': 'application/json'}
+                | payload = {
+                |   'email': 'tester@test.com',
+                |   'password': 'password'
+                | }
+                | response = requests.post(url, headers=headers, data=json.dumps(payload))
+                | print json.loads(response.content)
+            h3 Swift
+            pre
+              code 
+              | let url = NSURL('http://104.236.251.255:3000/api/login')!
+              | let session = NSURLSession.sharedSession()
+              | let request = NSMutableURLRequest(URL: url)
+              | request.HTTPMethod = "POST"
+              | request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+              | let json: [String: AnyObject] = ["email": "tester@test.com", "password": "password"]
+              | do {
+              |   let payload = try NSJSONSerialization.dataWithJSONObject(json, options: .PrettyPrinted)
+              |   request.HTTPBody = payload
+              | } catch let e as NSError {
+              |   print(e.localizedDescription)
+              | }
+              | let task = session.dataTaskWithRequest(request) {
+              |   (let data, let response, let error) in
+              |   guard let _:NSData = data let _:NSURLResponse = response where error == nil else {
+              |     print(error)
+              |     return
+              |   }
+              |   let jsonResponse = JSON(data: data!)
+              |   print(jsonResponse)
+              | }
+              | task.resume()
+            p Whew right?  And that is with SwiftyJSON already doing a little of work under the hood - which we will break down soon.  So let's jump into it!
+        div.col-sm-3.col-sm-offset-1.blog-sidebar
+          div.sidebar-module.sidebar-module-inset
+            h4 Key Libraries
+            ol.list-unstyled
+              li CoreData
+              li SwiftyJSON
+      div.row
+        div.col-sm-8.blog-main
+          div.blog-post
+            h2.blog-post-title Getting Started
+            h3 Set up an iOS Project
+            p So first lets start a new project in XCode.  I'm going to call it RestEasy.  We are going to be using CoreData to persist our data we retreive from Mongo, so don't forget to make sure to include it.  
+            img.img-responsive(src="/images/1_setupProject.png")
+            p Go ahead and click on the .xcdatamodeld file in the XCode navigator panel.  At the bottom of the screen click "Add Entity".  Go ahead and name your entity "Quote", and add 7 attributes.  Give them names and types.
+            img.img-responsive(src="/images/2_coreDataSetup.png")
+            p Then add a new file to the project, a Swift file, and name it Quote.  In this file we will create an NSManagedObject class named Quote that corresponds to the CoreData entity we just created.
+            img.img-responsive(src="/images/3_quoteClassSetup.png")
+            h3 Add SwiftyJSON to Project
+            p SwiftyJSON is an awesome library that abstracts away a lot of the major hassle of dealing with JSON in Swift, along with improving error handling, providing for better iteration over lists/arrays within JSON/dictionary object, all sorts of useful things.  You can get it here:
+            a(href="https://github.com/SwiftyJSON/SwiftyJSON") https://github.com/SwiftyJSON/SwiftyJSON
+            p The GitHub page has some good basic examples and documentation, but it doesn't really share examples used in more real world context, like the API calls we will be demonstrating here.  The library couldn't be easier to add to an XCode project, just drag the SwiftyJSON.swift onto the project tree in the navigator panel.  I like to add to targets that way the project doesn't need imported to every file you want to use it in.  
+            img.img-responsive(src="/images/4_addSwifty.png")
+            p Then lastly lets make a space for our data to load into, create a sync button and add a table view to our main view on the storyboard.  In the ViewController class that is automatically linked to the main view at project creation, go ahead and add outlets for the tableView and button, and the 3 functions required by UITableViewDataSource and UITableViewDelegate protocols.  And also while we are at it add a Quote array.  We will be using this later as we load data into the view.  
+            img.img-responsive(src="/images/5_tableView.png")
+        div.col-sm-3.col-sm-offset-1.blog-sidebar
+          div.sidebar-module.sidebar-module-inset
+            h4 Key Reminders
+            p CoreData doesn't store arrays - use Transformable type, but define the array and type in the NSManagedObject class
+            p CoreData doesn't support Int type - must define size (i.e. Int16)
+      
+      div.row
+        div.col-sm-8.blog-main
+          div.blog-post
+            h2.blog-post-title Making the API Call
+            p Now lets make an API call to get some quotes.  For this project, there is a batch of Node API endpoints accessing data stored in a MongoDB collection.  We will be using the following API endpoint to make a query.
+            blockquote
+              p http://localhost:3000/api
+              p POST /quotes/query
+              p Request body containing json with any valid keys for a quote document; returns any quotes matching ALL query parameters passed in
+            p The rest API is expecting a json body to be posted with any of the key-value pairs on which we'd like to match.  This pattern is very convenient for Node/Mongo API implementations, since the javascript and json document structure leads to very minimal parsing and manipulation in Node.  Not quite so simple for handling the data in iOS, unfortunately.  Enter SwiftyJSON, in coordination with NSURLSession.  Let's create a new Swift file and call it QuoteModel.  In this file add a variable called managedObjectContext.  This will be the "scratch pad" as the apple documentation calls it, for interacting with CoreData objects.  See their documentation here:
+            a(href="https://developer.apple.com/reference/coredata/nsmanagedobjectcontext") https://developer.apple.com/reference/coredata/nsmanagedobjectcontext
+            p Also add a SwiftyJSON variable (just "JSON") called quotes.  Then create a retrieveQuotes function.
+            img.img-responsive(src="/images/6_quoteModel.png")
+            This will get our data stored in a JSON member variable of the class, but we want this in CoreData, so next up we will parse the JSON into CoreData.  But first, let's instantiate our new model in our ViewController, and set the retrieveQuotes method to fire when the sync button is pressed, and print results to the console.  But first, we need to ensure we can actually hit our API endpoint.  Open the info.plist file, I like to edit as Source Code, and add the following App Transport Security Settings information - replace "localhost" with whatever domain you are using.
+            img.img-responsive(src="/images/configureAppSecurity.png")
+            p Then open your ViewController file and instantiate a QuoteModel, and call the retrieveQuotes method of your new class in the Sync function that you wired up to the sync button.  Run the app and click the sync button - and see what results you get in the console.  
+            img.img-responsive(src="/images/8_testAPI.png")
+
+        div.col-sm-3.col-sm-offset-1.blog-sidebar
+          div.sidebar-module.sidebar-module-inset
+            h4 Key Reminders
+            p NSURLSession dataTaskWithRequest is asynchronous, so if you have a real time dependency on this data in your app, make sure to integrate with a callback function
+            p iOS doesn't allow insecure (http://) requests by default, which can rule out a lot of APIs, and be especially bothersome for development work, so remember to set your domain exceptions in info.plist if needed
+
+      div.row
+        div.col-sm-8.blog-main
+          div.blog-post
+            h2.blog-post-title Writing to Core Data
+            p Alright then, we've got data coming from our API and getting stored in JSON format thanks to NSURLSession and SwiftyJSON, now let's get this JSON data into CoreData so it will persist across sessions, and without web connectivity.  Open up the QuoteModel file again, and let's add a second method, call this one storeQuotes.  What we are going to do is remove any old quotes in CoreData, and replace them with these refreshed ones from our retrieveQuotes method.  First off let's create a removeQuotes helper method.  
+            pre
+              code 
+              | func removeQuotes() {
+              |   let fetchRequest = NSFetchRequest(entityName: "Quote")
+              |   do {
+              |     let quoteContents = try self.managedObjectContext.executeFetchRequest(fetchRequest) as! [Quote]
+              |     for q in quoteContents {
+              |       self.managedObjectContext.deleteObject(q)
+              |     }
+              |   } catch {
+              |     fatalError("Failed to fetch quotes: \(error)")
+              |   }
+              | }   
+            p So basically here we are retrieving all Quote entities from core data with the NSFetchRequest, which can be really simple - like this, the equivalent of SQL "SELECT * FROM quotes".  You can can also set the NSPredicate member of NSFetchRequest to do some fairly sophisticated queries.  Here is some documentation on querying CoreData.
+            a(href="https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CoreData/FetchingObjects.html") https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CoreData/FetchingObjects.html
+            p The NSManagedObject that is returned by the executeFetchRequest is cast to our Quote object that we created.  Then we can iterate over each Quote in this Quote array, and delete it from core data.  With a clean slate - we can now go about the business of adding our new quotes in.
+            pre
+              code
+              | func storeQuotes() {
+              |   self.removeQuotes()
+              |   for (_, q) in self.quotesJSON {
+              |     let quote = NSEntityDescription.insertNewObjectForEntityForName("Quote", inManagedObjectContext: |managedObjectContext) as! Quote
+              br
+              |     quote.id = q["_id"].string!
+              |     quote.user_id = q["user_id"].string!
+              |     quote.isFavorite = q["isFavorite"].string!
+              |     quote.text = q["text"].string!
+              |     quote.said_by = q["said_by"].string!
+              |     quote.rating = q["rating"].number!.shortValue
+              br
+              |     var tagArray = [NSNumber]()
+              |     for (_, t) in q["tags"] {
+              |       let tagId = t.number!
+              |       tagArray.append(tagId)
+              |     }
+              |     quote.tags = tagArray
+              |   }
+              | }
+            p This demonstrates some of the nifty JSON iteration capabilities in SwiftyJSON.  It looks a bit different than you'd expect in Python or JS, but nearly as serviceable.  You can nest your calls to JSON arrays as well - see the multiple "for (key, json) in JSON" calls, with the second one iterating over the tags array within each quote.  The tags array also needs some special treatment.  Notice how SwiftyJSON has specific casts to create Swift variables out of JSON Objects. Here is a summary of them.  
+            ul
+              li json.string: String?
+              li json.number: NSNumber?
+              li json.bool: Bool?
+              li json.array: Array<JSONValue>?
+              li json.object: Dictionary<String, JSONValue>?
+            p Another nice SwiftyJSON overview can be found here:
+            a(href="https://www.binpress.com/tutorial/swiftyjson-how-to-handle-json-in-swift/111") https://www.binpress.com/tutorial/swiftyjson-how-to-handle-json-in-swift/111
+            p Notice also the specific cast of the NSNumber for the rating to shortValue, or Int16 - remember that is what we set it to in our data model and Quote object.  NSNumber has a list of conversion accessors which can be found here:
+            a(href="https://developer.apple.com/reference/foundation/nsnumber") https://developer.apple.com/reference/foundation/nsnumber
+
+        div.col-sm-3.col-sm-offset-1.blog-sidebar
+          div.sidebar-module.sidebar-module-inset
+            h4 Key Reminders
+            p JSON objects will need to be converted or cast to be assigned to Swift values.  SwiftyJSONs built in methods make this easy.  You may have to chain the number conversion with NSNumber convertors to get the output format you need.
+
+      div.row
+        div.col-sm-8.blog-main
+          div.blog-post
+            h2.blog-post-title Connecting Data to the UI
+            p Now we are in the home stretch.  Let's go back to the UI, and add one more button, this one to trigger updating CoreData and our UI.  Let's wire it up to the ViewController, and call our new storeQuotes method.  
+            img.img-responsive(src="/images/9_viewQuotes.png")
+            p Now that the quotes are safely stored in CoreData - we need to retrieve them so we can render the quote text in our tableView.  Let's add on final method to the QuoteModel, called returnQuotes, which does just that - returns an array of Quote objects from CoreData.  
+            pre
+              code
+              | func returnQuotes() -> [Quote] {
+              |   var quotes = [Quote]()
+              |   let quoteRequest = NSFetchRequest(entityName: "Quote")
+              |   do {
+              |     let quoteResults = try managedObjectContext.executeFetchRequest(quoteRequest) as? [Quote]
+              |     quotes = quoteResults!
+              |   } catch let error as NSError {
+              |     print("failed fetch \(error.localizedDescription)")
+              |   }
+              |   return quotes
+              | }
+            p Let's also call return Quotes from the View button, and add one final call, this one to tell tableView to reload data.  
+            img.img-responsive(src="/images/10_finalCode.png")
+            p Notice the extra code finally filled in for the tableView methods also - setting the number of rows in our single section to the number of items in the quotes array, and setting the text value of each cell to the text of each quote at the sample index row.  Lastly, let's run our code to see how it looks!
+            img.img-responsive(src="/images/11_results.png")
+            h3 Links to GitHub code:
+            a(href="https://github.com/bbrauer25/QuoteJar") https://github.com/bbrauer25/QuoteJar
+            p
+            a(href="https://github.com/bbrauer25/RestEasy") https://github.com/bbrauer25/RestEasy
+        div.col-sm-3.col-sm-offset-1.blog-sidebar
+          div.sidebar-module.sidebar-module-inset
+            h4 Key Reminders
+            p Note that in Swift 2.0, errors aren't populated by the function call in many places, like executeFetchRequest and NSJSONSerialization - you must instead run these in a try - catch structure.  

@@ -11,6 +11,10 @@ router.get('/', function(req, res, next) {
 	} else res.render('login', { title: 'Please Login'});
 });
 
+router.get('/howTo', function(req, res, next) {
+	res.render('howTo');
+})
+
 router.get('/viewQuotes', function(req, res, next) {
 	if (req.session && req.session.userId) {
 		console.log(req.session.userId)

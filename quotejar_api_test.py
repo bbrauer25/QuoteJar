@@ -1,7 +1,7 @@
 import requests
 import simplejson as json
 
-base_url = 'http://localhost:3000/api/'
+base_url = 'http://104.236.251.255:3000/api/'
 
 headers = {'Content-Type': 'application/json'}
 

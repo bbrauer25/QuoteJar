@@ -64,6 +64,7 @@ router.post('/quotes/query', function(req, res, next) {
 	console.log(myQuery);
 
 	quotes.find(myQuery, {}, function(e, quotes_json) {
+		console.log(quotes_json)
 		res.json(quotes_json);
 	});
 });
@@ -198,6 +199,8 @@ router.post('/quotes', function(req, res, next) {
 	var quotes = db.get('quoteCollection');
 	var tags = db.get('tag');
 	var users = db.get('userCollection');
+
+	console.log(req.body)
 
 	//validate input
 	req.checkBody("text", "Please enter some quote text").notEmpty();
