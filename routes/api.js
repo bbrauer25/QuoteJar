@@ -37,6 +37,50 @@ router.post('/userID', function(req, res, next) {
 	});
 });
 
+router.post('/createUser', function(req, res, next) {
+	var db = req.db;
+	var users = db.get('userCollection');
+	//do some validation here
+	req.checkBody("email", "Please make sure your emails match").equals(req.body.confirmEmail);
+	req.checkBody("password", "Please make sure your passwords match").equals(req.body.confirmPassword);
+	req.checkBody("email", "Please Enter a Valid Email Address").isEmail();
+	req.checkBody("confirmEmail", "Please Enter a Valid Confirmation Email Address").isEmail();
+	req.checkBody("password", "Please enter a valid password").notEmpty();
+	req.checkBody("confirmPassword", "Please enter a valid confirmation password").notEmpty();
+
+	var errors = req.validationErrors();
+
+	if (errors) {
+		console.log(errors);
+		users.find({},{}, function(e, docs){
+			res.send(errors)
+		});
+	} else {
+		users.insert({
+		email: req.body.email,
+		password: req.body.password
+		}, function(e, docs) {
+			if (e) {
+				console.warn(e.message);
+			} else {
+				users.find({email: req.body.email, password: req.body.password}, {}, function(e, user) {
+					if (errors) {
+						//bad email and/or password sent in
+						res.status(400);
+						res.send(errors);
+					} else if (user.length > 0) {
+						//return json of user info
+						res.json(user);
+					} else {
+						//user doesn't exist
+						res.send('[]');
+					}
+				});
+			}
+		});
+	}
+});
+
 router.get('/quotes', function(req, res, next) {
 	var db = req.db;
 	var quotes = db.get('quoteCollection');
@@ -73,6 +117,7 @@ router.post('/quotes/query', function(req, res, next) {
 router.delete('/quotes', function(req, res) {
 	var db = req.db;
 	var quotes = db.get('quoteCollection');
+	console.log(req.body._id)
 	quotes.remove({_id: req.body._id}, {}, function(e, result) {
 		if (e) {
 			res.status(400);
@@ -143,6 +188,7 @@ router.put('/quotes', function(req, res, next) {
 					if (req.body.text) myQuery.text = req.body.text;
 					if (req.body.said_by) myQuery.said_by = req.body.said_by;
 					if (req.body.isFavorite) myQuery.isFavorite = req.body.isFavorite;
+					if (req.body.rating) myQuery.rating = req.body.rating;
 					myQuery.tags = my_tags;
 					if (req.body.user_id) myQuery.user_id = req.body.user_id;
 					console.log(myQuery);

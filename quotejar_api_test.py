@@ -80,6 +80,7 @@ user_quotes = requests.post(post_url, headers=headers, data=json.dumps(query))
 print(user_quotes.content + '\n')
 
 print("Deleting quote")
+print(put_query)
 delete_query = {
 	"_id": put_query["_id"]
 }
